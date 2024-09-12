@@ -4,16 +4,21 @@
 
 bool match_pattern(const std::string& input_line, const std::string& pattern) {
     std::string alphaNumeric = "abcdefghijklmnopqrstuvwxyzABCDEFIGHKLMNOPQRSTUVWXYZ0123456789_";
+    int n = pattern.length();
     if (pattern.length() == 1) {
         return input_line.find(pattern) != std::string::npos;
     }else if (pattern == "\\d"){
         return input_line.find_first_of("0123456789") != std::string::npos;
     }else if (pattern == "\\w"){
         return input_line.find_first_of(alphaNumeric) != std::string::npos;
+    }else if ( pattern[0] == '[' && pattern[n-1] == ']'){
+        std::string patternString = pattern.substr(1,n-2);
+        return input_line.find_first_of(patternString) != std::string::npos;
     }
     else {
         throw std::runtime_error("Unhandled pattern " + pattern);
     }
+
 }
 
 int main(int argc, char* argv[]) {
