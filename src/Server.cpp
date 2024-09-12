@@ -13,6 +13,8 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
         return input_line.find_first_of(alphaNumeric) != std::string::npos;
     }else if ( pattern[0] == '[' && pattern[n-1] == ']'){
         std::string patternString = pattern.substr(1,n-2);
+        if ( patternString[0] == '^' )
+            return input_line.find_first_of(pattern.substr(2,n-2)) == std::string::npos;
         return input_line.find_first_of(patternString) != std::string::npos;
     }
     else {
