@@ -11,8 +11,6 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
     if ( pattern.empty()) return true;
     if (input_line.empty()) return false;
 
-    int n = pattern.length();
-
     if (pattern.substr(0,2) == "\\d"){
 
         if(isdigit(input_line[0]))
@@ -38,6 +36,9 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
             return match_pattern(input_line.substr(1), pattern.substr(bracket_pos+1));
         else 
             return 0;
+    } else if (pattern[0] == '^'){
+        int n = pattern.length()-1;
+        return (input_line.substr(0,n) == pattern.substr(1));
     }
     
     if (pattern[0] == input_line[0]){
