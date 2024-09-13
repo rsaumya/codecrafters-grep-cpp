@@ -59,8 +59,11 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
         if (match_pattern(input_line, pattern.substr(2))) return true;
 
         if (!input_line.empty() && (pattern[0] == '.' || pattern[0] == input_line[0])) {
-            return match_pattern(input_line.substr(1), pattern.substr(2));
+            return match_pattern(input_line.substr(1), pattern.substr());
         }
+    
+    }else if (pattern.length() > 1 && pattern[1] == '.') {
+         return (input_line[0] == pattern[0]) && match_pattern(input_line.substr(1), pattern.substr(2));
     }
     
     if (pattern[0] == input_line[0]){
