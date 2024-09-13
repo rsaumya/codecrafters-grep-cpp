@@ -36,9 +36,17 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
             return match_pattern(input_line.substr(1), pattern.substr(bracket_pos+1));
         else 
             return 0;
+    
     } else if (pattern[0] == '^'){
+
         int n = pattern.length()-1;
         return (input_line.substr(0,n) == pattern.substr(1));
+    
+    }else if (pattern.back() == '$'){
+
+        int m = input_line.length();
+        int n = pattern.length()-1;
+        return(input_line.substr(m-n) == pattern.substr(0,n));
     }
     
     if (pattern[0] == input_line[0]){
