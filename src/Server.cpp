@@ -2,25 +2,48 @@
 #include <string>
 #include <algorithm>
 
-bool match_pattern(const std::string& input_line, const std::string& pattern) {
-    std::string alphaNumeric = "abcdefghijklmnopqrstuvwxyzABCDEFIGHKLMNOPQRSTUVWXYZ0123456789_";
-    int n = pattern.length();
-    if (pattern.length() == 1) {
-        return input_line.find(pattern) != std::string::npos;
-    }else if (pattern == "\\d"){
-        return input_line.find_first_of("0123456789") != std::string::npos;
-    }else if (pattern == "\\w"){
-        return input_line.find_first_of(alphaNumeric) != std::string::npos;
-    }else if ( pattern[0] == '[' && pattern[n-1] == ']'){
-        std::string patternString = pattern.substr(1,n-2);
-        if ( patternString[0] == '^' )
-            return input_line.find_first_of(pattern.substr(2,n-2)) == std::string::npos;
-        return input_line.find_first_of(patternString) != std::string::npos;
-    }
-    else {
-        throw std::runtime_error("Unhandled pattern " + pattern);
-    }
+bool positive_group(const std::string& input_line, const std::string& pattern){
+    return input_line.find_first_of(pattern) != std::string::npos;
+}
 
+bool match_pattern(const std::string& input_line, const std::string& pattern) {
+
+    if ( pattern.empty()) return true;
+    if (input_line.empty()) return false;
+
+    int n = pattern.length();
+
+    if (pattern.substr(0,2) == "\\d"){
+
+        if(isdigit(input_line[0]))
+            return match_pattern(input_line.substr(1),pattern.substr(2));
+        return match_pattern(input_line.substr(1),pattern);
+    }else if (pattern.substr(0,2) == "\\w"){
+
+        if(isalnum(input_line[0]))
+            return match_pattern(input_line.substr(1),pattern.substr(2));
+        return match_pattern(input_line.substr(1),pattern);;
+
+    }else if ( pattern[0] == '[') {
+
+        auto bracket_pos = pattern.find(']');
+        std::string pattern_string = pattern.substr(1,bracket_pos-1);
+
+        if ( pattern_string[0] == '^'){
+            if(!positive_group(input_line, pattern_string.substr(1)))
+                return match_pattern(input_line.substr(1), pattern.substr(bracket_pos+1));
+            return 0;
+        }
+        if (positive_group(input_line, pattern_string))
+            return match_pattern(input_line.substr(1), pattern.substr(bracket_pos+1));
+        else 
+            return 0;
+    }
+    
+    if (pattern[0] == input_line[0]){
+        return match_pattern(input_line.substr(1),pattern.substr(1));
+    }
+     return match_pattern(input_line.substr(1),pattern);;
 }
 
 int main(int argc, char* argv[]) {
@@ -50,11 +73,10 @@ int main(int argc, char* argv[]) {
     std::getline(std::cin, input_line);
     
     try {
-        if (match_pattern(input_line, pattern)) {
-            return 0;
-        } else {
-            return 1;
-        }
+        if (match_pattern(input_line, pattern)) 
+                return 0;
+        else
+                 return 1;
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << std::endl;
         return 1;
