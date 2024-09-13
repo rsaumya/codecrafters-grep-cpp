@@ -64,6 +64,15 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
     
     }else if (pattern.length() > 1 && pattern[1] == '.') {
          return (input_line[0] == pattern[0]) && match_pattern(input_line.substr(1), pattern.substr(2));
+
+    }else if(pattern[0] == '('){
+
+        int m = pattern.find(')');
+        int n = pattern.find('|');
+        if (m>n){
+            return (match_pattern(input_line, pattern.substr(1,n-1)) || match_pattern(input_line,pattern.substr(n+1,m-n-1)));
+        }
+
     }
     
     if (pattern[0] == input_line[0]){
