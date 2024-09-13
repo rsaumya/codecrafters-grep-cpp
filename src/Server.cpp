@@ -50,7 +50,7 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
     
     }else if (pattern.length() >1 && pattern[1] == '+'){
 
-        if(!input_line.empty && (pattern[0] == '.' || pattern[0] == input_line[0]))
+        if(!input_line.empty() && (pattern[0] == '.' || pattern[0] == input_line[0]))
             return match_pattern(input_line.substr(1),pattern.substr(2));
     }
 
