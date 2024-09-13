@@ -16,6 +16,7 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
         if(isdigit(input_line[0]))
             return match_pattern(input_line.substr(1),pattern.substr(2));
         return match_pattern(input_line.substr(1),pattern);
+    
     }else if (pattern.substr(0,2) == "\\w"){
 
         if(isalnum(input_line[0]))
@@ -52,8 +53,15 @@ bool match_pattern(const std::string& input_line, const std::string& pattern) {
 
         if(!input_line.empty() && (pattern[0] == '.' || pattern[0] == input_line[0]))
             return match_pattern(input_line.substr(1),pattern.substr(2));
-    }
+    
+    }else if (pattern.length() > 1 && pattern[1] == '?') {
 
+        if (match_pattern(input_line, pattern.substr(2))) return true;
+
+        if (!input_line.empty() && (pattern[0] == '.' || pattern[0] == input_line[0])) {
+            return match_pattern(input_line.substr(1), pattern.substr(2));
+        }
+    }
     
     if (pattern[0] == input_line[0]){
         return match_pattern(input_line.substr(1),pattern.substr(1));
