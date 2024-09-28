@@ -1,261 +1,342 @@
-#include <algorithm>
-#include <iostream>
-#include <string>
-#include <utility>
-#include <vector>
-
+#include<algorithm>
+#include<iostream>
+#include<string>
+#include<vector>
+#include<unordered_map>
 
 class patternMatch {
+private:
+	std::string Digit = "0123456789";
+	std::string Alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+	std::vector<std::string> capturedGroups;
+	bool start = false;
+	/*size_t inputStart = 0;
+	size_t patternStart = 0;*/
 
-    private:
-        bool positiveGroup (const std::string& inputLine, const std::string& pattern);
-        std::string getGroup(int groupNumber);
-        bool storeMatchedPattern(const std::string& inputLine,const std::string& pattern);
-        std::pair<std::string,std::string> oneOrMoreHelper(const std::string& inputLine,const std::string& pattern);
 
-        std::string Digit ="0123456789";
-        std::string alphaNum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"+Digit;
-        std::vector<std::string> backreferenceGroup;
-        size_t matchedStringLength =0;
-        std::pair<std::string,std::string> addStorage;
-        bool start = false;
+	bool digit(const std::string& inputLine,size_t& inputIndex);
+	bool alphaNum(const std::string& inputLine, size_t& inputIndex);
+	bool character(const std::string& inputLine, const std::string& pattern, size_t& inputIndex, size_t& patternIndex);
+	bool positiveCharacterGroup(const char& inputLine, const std::string& pattern);
+	bool match(const std::string& inputLine, const std::string& pattern, size_t& inputIndex, size_t patternIndex);
+	bool containPipe(const std::string& pattern);
+	bool oneOrMore(const std::string& inputLine, const std::string& pattern, size_t& start);
+	bool alteration(const std::string& inputLine, const std::string& pattern, size_t& inputIndex);
+	bool startOfLine(const std::string& inputLine, const std::string& pattern, size_t& inputIndex, size_t& patternIndex);
+	bool matchBackrefernce(const std::string& inputLine, size_t groupNum, size_t& inputIndex);
 
-    public:
-
-        bool matchPattern (const std::string& inputLine, const std::string& pattern);    
+public: 
+	bool matchPattern(const std::string& inputLine, const std::string& pattern);
 };
 
-bool patternMatch::positiveGroup(const std::string& inputLine, const std::string& pattern){
-    size_t n = pattern.find_first_of('-');
-    if(n != std::string::npos){
-        size_t first = alphaNum.find_first_of(pattern[n-1]);
-        size_t last = alphaNum.find_first_of(pattern[n+1]);
-        std::string newPattern = alphaNum.substr(first,last-first);
-        return newPattern.find_first_of(inputLine[0])!= std::string::npos;
-    }
-    return pattern.find_first_of(inputLine[0]) != std::string::npos;
+//check for the digit in the input line
+bool patternMatch::digit(const std::string& inputLine, size_t& inputIndex) {
+	if (start) {
+		return Digit.find(inputLine[inputIndex])!=std::string::npos;
+	}
+	start = true;
+	inputIndex = inputLine.find_first_of(Digit);
+	return inputIndex != std::string::npos;
 }
 
-std::string patternMatch::getGroup(int groupNumber){
-    if ( groupNumber <= backreferenceGroup.size())
-        return backreferenceGroup[groupNumber-1];
-    return "";
+//check for the alpha numeric values in input line
+bool patternMatch::alphaNum(const std::string& inputLine, size_t& inputIndex ) {
+	if (start) {
+		return Alphanumeric.find(inputLine[inputIndex])!= std::string::npos;
+	}
+	start = true;
+	inputIndex = inputLine.find_first_of(Alphanumeric);
+	return inputIndex != std::string::npos;
 }
 
-bool patternMatch::storeMatchedPattern(const std::string& inputLine, const std::string& pattern){
-    size_t closeParenPos = pattern.find(')');
-    if (closeParenPos == std::string::npos) return false;
-
-    std::string groupPattern = pattern.substr(1, closeParenPos - 1);
-    std::string remainingPattern = pattern.substr(closeParenPos + 1);
-    backreferenceGroup.push_back('('+groupPattern+')');
-
-    if(pattern[closeParenPos+1] == '+'){
-        addStorage = oneOrMoreHelper(inputLine.substr(matchedStringLength),pattern);
-        return matchPattern(addStorage.first,addStorage.second);
-    }
-
-    // Match alternation (|) within parentheses, e.g. (abc|def)
-    size_t alternationPos = groupPattern.find('|');
-    if (alternationPos != std::string::npos) {
-        std::string leftPattern = groupPattern.substr(0, alternationPos);
-        std::string rightPattern = groupPattern.substr(alternationPos + 1);
-
-        // Try matching the left side or the right side
-        return matchPattern(inputLine, leftPattern + remainingPattern) || matchPattern(inputLine, rightPattern + remainingPattern);
-    }
-    // else if (matchPattern(inputLine,groupPattern+remainingPattern))
-    return matchPattern(inputLine,groupPattern+remainingPattern);
+//check if a given pattern character exists anywhere in the input line
+bool patternMatch::character(const std::string& inputLine, const std::string& pattern,size_t& inputIndex, size_t& patternIndex) {
+	if (start) {
+		return inputLine[inputIndex] == pattern[patternIndex];
+	}
+	start = true;
+	inputIndex = inputLine.find(pattern[patternIndex]);
+	return inputIndex != std::string::npos;
 }
 
-//One or More Helper Function
-std::pair<std::string,std::string> patternMatch::oneOrMoreHelper(const std::string& inputLine,const std::string& pattern){
-    size_t i =0;
-    size_t n = pattern.find_first_of('+');
-    
-    std::string inputLineModified = inputLine;
-    std::string patternModified = pattern.substr(0,n);
+//check for positive character groups (e.g. [abc]) in the input line
+bool patternMatch::positiveCharacterGroup(const char& inputLine, const std::string& pattern) {
+	size_t n = pattern.find('-');
+	if (n != std::string::npos) {
+		char a = pattern[n - 1];
+		char b = pattern[n + 1];
+		//extract the characters between the range
+		size_t start = Alphanumeric.find_first_of(a);
+		size_t end = Alphanumeric.find_first_of(b);
+		std::string patternRange = Alphanumeric.substr(start, end - start);
 
-    while(matchPattern(inputLineModified,patternModified)){
-        inputLineModified = inputLineModified.substr(1);
-        i++;
-    }
-    if( i==0) return std::make_pair(inputLineModified,patternModified);
-        return std::make_pair(inputLineModified, pattern.substr(n+1));
-
+		return patternRange.find(inputLine) != std::string::npos;
+	}
+	return pattern.find(inputLine) != std::string::npos;
 }
 
-// Main match pattern function
-bool patternMatch::matchPattern(const std::string& inputLine, const std::string& pattern){
+//bool patternMatch::containSquareBracket(const std::string& pattern) {
+//	return pattern.find('[') != std::string::npos;
+//}
 
-    //if pattern found then it is empty otherwise input line will be empty
-    if(pattern.empty()) return true;
-    if (pattern[0] == '$') {
-        return inputLine.empty();
-    }
-    if(inputLine.empty()) return false;
+//one or more function
+bool patternMatch::oneOrMore(const std::string& inputLine, const std::string& pattern, size_t& start) {
+	size_t count = 0;
+	size_t temp = start;
+	while (temp != inputLine.length() && match(inputLine, pattern,temp,0)) {
+			count++;
+		}
+	if (count > 0) {
+		start += count;
+		return true;
+	}
+	else return false;
+}
 
-    //check for digit "\d"
-    if(pattern.substr(0,2) == "\\d"){
-        start = true;
-        if(pattern[2] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
-        size_t n = inputLine.find_first_of(Digit);
-        if(n != std::string::npos){
-            return matchPattern(inputLine.substr(n+1),pattern.substr(2));
-        }
-        return false;
-    }
+//check for '|'
+bool patternMatch::containPipe(const std::string& pattern) {
+	return pattern.find_first_of('|') != std::string::npos;
+}
 
-    //check for alpha numeric values
-    if (pattern.substr(0, 2) == "\\w") {
-        start = true;
-        if(pattern[2] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
-        size_t n = inputLine.find_first_of(alphaNum);
-        if (n != std::string::npos) {          
-            return matchPattern(inputLine.substr(n+1), pattern.substr(2));
-        }
-        return false;
-    }
+//Alteration
+bool patternMatch::alteration(const std::string& inputLine, const std::string& pattern, size_t& inputIndex) {
+	std::string word="";
+	std::vector<std::string> alterWords;
+	for (char c : pattern) {
+		if (c == '|') {
+			alterWords.push_back(word);
+			word = "";
+		}
+		else word += c;
+	}
+    alterWords.push_back(word);
+	for (std::string s : alterWords) {
+		if (match(inputLine, s, inputIndex, 0)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+//backreference
+bool patternMatch::matchBackrefernce(const std::string& inputLine, size_t groupNum, size_t& inputIndex) {
+	if (groupNum > capturedGroups.size()) return false;
+	
+	const std::string& captured = capturedGroups[groupNum-1];
+	
+	if (inputLine.substr(inputIndex, captured.length()) == captured) {
+		inputIndex += captured.length();
+		return true;
+	}
+	return false;
+}
 
 
-    //check for [ ] and [^ ]
-    if (pattern[0] == '[') {
-        start = true;
-        size_t bracketPosition = pattern.find(']');
-        std::string patternString = pattern.substr(1, bracketPosition - 1);
-        
-        if(pattern[bracketPosition+1] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
+//match function
+bool patternMatch::match(const std::string& inputLine, const std::string& pattern, size_t& inputIndex, size_t patternIndex) {
+	while (inputIndex < inputLine.length() && patternIndex < pattern.length()) {
+	
+		if (pattern[patternIndex + 1] == '+') {
+			start = true;
+			if (oneOrMore(inputLine, pattern.substr(patternIndex, 1), inputIndex))
+				patternIndex += 2;
+			else return false;
+		}
+		else if (pattern[patternIndex + 2] == '+' && pattern[patternIndex] == '\\') {
+			start = true;
+			if (oneOrMore(inputLine, pattern.substr(patternIndex, 2), inputIndex))
+				patternIndex += 3;
+			else return false;
+		}
+		else if (pattern[patternIndex] == '\\' && isdigit(pattern[patternIndex + 1])) {
+			int groupNum = pattern[patternIndex + 1] - '0';
+			
+			if (!matchBackrefernce(inputLine, groupNum, inputIndex)) return false;
+			patternIndex += 2;
+		}
+		else if (pattern[patternIndex] == '\\') {
+				if (pattern[patternIndex + 1] == 'd') {
+					
+					if (digit(inputLine,inputIndex)) {
+						++inputIndex;
+						patternIndex += 2;
+					}
+					else return false;
+				}
+				else if (pattern[patternIndex + 1] == 'w') {
+						if (alphaNum(inputLine,inputIndex)) {
+							++inputIndex;
+							patternIndex += 2;
+						
+						}
+						else return false;
+				}
+                else return false;
+		}
+		else if (pattern[patternIndex] == '^') {
+			start = true;
+			if (inputIndex != 0) return false; // input must start at the beginning
+			patternIndex++;
+		}
+		else if (pattern[patternIndex] == '$') {
+			if (inputIndex != inputLine.length()) return false;
+			patternIndex++;
+		}
+		else if (pattern[patternIndex] == '.') {
+			start = true;
+			inputIndex++;
+			patternIndex++;
+		}
 
-        if (patternString[0] == '^') {
-            if (!positiveGroup(inputLine, patternString.substr(1))) {
-                return matchPattern(inputLine.substr(1), pattern.substr(bracketPosition + 1));
+		else if (pattern[patternIndex + 1] == '?') {
+			size_t temp = 0; //to store the index of pattern in case remaining pattern not match
+			//check for the remaining pattern, if it matches then '?' matches the empty charater
+			size_t n = inputLine.find(' ', inputIndex);
+			std::string str = inputLine.substr(inputIndex, n - inputIndex);
+			
+			if (match(str, pattern, temp, patternIndex+2) || str =="") {
+				patternIndex += 2;
+			}	
+			else if (inputLine[inputIndex] == pattern[patternIndex]) {
+				patternIndex+=2;
+				inputIndex++;
+			}
+		}
+		else if (pattern[patternIndex] == '[') {
+			start = true;
+			size_t closeBracket = pattern.find(']', patternIndex);
+			if (closeBracket == std::string::npos)
+				throw std::runtime_error("Unhandled pattern " + pattern);
+
+			std::string bracket = pattern.substr(patternIndex+1, closeBracket - patternIndex - 1);
+			if (pattern[closeBracket + 1] == '+') {
+				if (oneOrMore(inputLine, pattern.substr(patternIndex, closeBracket - patternIndex + 1), inputIndex))
+					patternIndex = closeBracket + 2;
+				else return false;
+			}
+			else if (bracket[0] == '^') {
+					if (!positiveCharacterGroup(inputLine[inputIndex], bracket.substr(1))) {
+						inputIndex++;
+						patternIndex = closeBracket + 1;
+					}
+					else return false;
+			}
+			else if (positiveCharacterGroup(inputLine[inputIndex], bracket)) {
+				inputIndex++;
+				patternIndex = closeBracket + 1;
+			}
+			else return false;
+		}
+		else if (pattern[patternIndex] == '(') {
+			start = true;
+			size_t closeBracket = pattern.find(')', patternIndex);
+			if (closeBracket == std::string::npos)
+				throw std::runtime_error("Unhandled pattern " + pattern);
+
+			std::string group = pattern.substr(patternIndex + 1, closeBracket - patternIndex - 1);
+			
+			size_t start = inputIndex; //to store starting index of the matched string of input in captured groups
+			if (pattern[closeBracket + 1] == '+') {
+				if (oneOrMore(inputLine, group, inputIndex)) {
+					capturedGroups.push_back(inputLine.substr(start, inputIndex - start + 1));
+					patternIndex = closeBracket + 2;
+				}
+				else return false;
+				
+			}
+			else if (containPipe(group)) {
+				if (alteration(inputLine, group, inputIndex)) {
+                    capturedGroups.push_back(inputLine.substr(start, inputIndex - start));
+					patternIndex = closeBracket + 1;
+				}
+				else return false;
+
+			}
+			else if (match(inputLine, group, inputIndex, 0)) {
+				capturedGroups.push_back(inputLine.substr(start, inputIndex - start));
+				patternIndex = closeBracket + 1;
+			}
+			else {
+				
+				return false;
+			}
+		}
+		else {
+            if (start) {
+                if (character(inputLine, pattern, inputIndex, patternIndex)) {
+                    ++inputIndex;
+                    ++patternIndex;
+                }
+                else return false;
             }
-            return false;
-        }
-        if (positiveGroup(inputLine, patternString)) {
-            return matchPattern(inputLine.substr(1), pattern.substr(bracketPosition + 1));
-        }
-        return false;
-    }
-    if (pattern[0] == '^') {
-        start = true;
-        size_t n = pattern.find_first_of(' ') ;
-        if(n == std::string::npos){
-            int n = pattern.length()-1;
-            return (inputLine.substr(0,n) == pattern.substr(1));
-        }
-        if (matchPattern(inputLine.substr(0, n-1), pattern.substr(1,n-1)))
-             return matchPattern(inputLine.substr(n-1),pattern.substr(n+1));
-        return false;
-    }
-
-    //Handles '+' for one or more time when pattern is a single character
-    if (pattern.length() > 1 && pattern[1] == '+'){
-        start = true;
-        size_t i = 0;
-        while (i < inputLine.length() && (pattern[0] == '.' || pattern[0] == inputLine[i])) {
-            i++;
-        }
-        if(i==0) return false;
-        return matchPattern(inputLine.substr(i), pattern.substr(2));
-    }
-
-
-    if (pattern.length() > 1 && pattern[1] == '?') {
-        start = true;
-        if(pattern[2] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
-        if ( matchPattern(inputLine, pattern.substr(2))) return true;
-        if (!inputLine.empty() && (pattern[0] == '.' || pattern[0] == inputLine[0])) {
-            return matchPattern(inputLine.substr(1), pattern.substr(2));
-        }
-    }
-
-    if (pattern[0] == '.') {
-        start = true;
-        if(pattern[1] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
-        return matchPattern(inputLine.substr(1), pattern.substr(1));
-    }
-
-    if (pattern[0] == '(') {
-        start = true;
-        return storeMatchedPattern(inputLine, pattern);
-    }
-
-    if (pattern[0] == '\\' && isdigit(pattern[1])) {
-        if(pattern[2] == '+'){
-            addStorage = oneOrMoreHelper(inputLine,pattern);
-            return matchPattern(addStorage.first,addStorage.second);
-        }
-        int groupNumber = pattern[1] - '0';
-        std::string capturedGroup = getGroup(groupNumber);
-        return matchPattern(inputLine,capturedGroup+pattern.substr(2));
-    }
-
-    if (pattern[0] == inputLine[0]) {
-        start = true;
-        return matchPattern(inputLine.substr(1), pattern.substr(1));
-    }
-    if(!start) return matchPattern(inputLine.substr(1),pattern);
+			else {
+				std::string subPattern = "";
+				size_t i = patternIndex;
+				//implement find substring
+				while (Alphanumeric.find(pattern[i])!= std::string::npos && pattern[i] != ' ' 
+					&& pattern[i+1]!='+' && pattern[i+1] != '?') {
+					i++;
+				}
+				
+				subPattern = pattern.substr(patternIndex, i - patternIndex);
+				if (character(inputLine, subPattern, inputIndex, patternIndex)) {
+					inputIndex += i;
+					patternIndex += i;
+				}
+				else return false;
+			}
+			
+			
+		}
+	}
+	if (patternIndex >= pattern.length() || pattern[patternIndex] == '$') return true;
+    else if(inputIndex > inputLine.length()) return false;
     return false;
-    
 }
 
 
-
+bool patternMatch::matchPattern(const std::string& inputLine, const std::string& pattern) {
+	size_t inputIndex = 0, patternIndex = 0;
+	return match(inputLine,pattern,inputIndex,patternIndex);
+}
 
 int main(int argc, char* argv[]) {
-    // Flush after every std::cout / std::cerr
-    std::cout << std::unitbuf;
-    std::cerr << std::unitbuf;
+	// Flush after every std::cout / std::cerr
+	std::cout << std::unitbuf;
+	std::cerr << std::unitbuf;
 
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
-    std::cout << "Logs from your program will appear here" << std::endl;
+	// You can use print statements as follows for debugging, they'll be visible when running tests.
+		std::cout << "Logs from your program will appear here" << std::endl;
 
-    if (argc != 3) {
-        std::cerr << "Expected two arguments" << std::endl;
-        return 1;
-    }
+	if (argc != 3) {
+		std::cerr << "Expected two arguments" << std::endl;
+		return 1;
+	}
 
-    std::string flag = argv[1];
-    std::string pattern = argv[2];
+	std::string flag = argv[1];
+	std::string pattern = argv[2];
 
-    if (flag != "-E") {
-        std::cerr << "Expected first argument to be '-E'" << std::endl;
-        return 1;
-    }
+	if (flag != "-E") {
+		std::cerr << "Expected first argument to be '-E'" << std::endl;
+		return 1;
+	}
 
-    // Uncomment this block to pass the first stage
-    //
-    std::string inputLine;
-    std::getline(std::cin, inputLine);
-    patternMatch match;
-    try {
-        if (match.matchPattern(inputLine, pattern)){
-            // std::cout<<"match found"<<std::endl;
-            return 0;
-        } 
-        else{
-            // std::cout<<"match not found!"<<std::endl;
-            return 1;
-        }
-            
-    } catch (const std::runtime_error& e) {
-        std::cerr << e.what() << std::endl;
-        return 1;
-    }
+	// Uncomment this block to pass the first stage
+	//
+	std::string inputLine;
+	std::getline(std::cin, inputLine);
+	patternMatch match;
+	try {
+		if (match.matchPattern(inputLine, pattern)) {
+			return 0;
+		}
+		else {
+			return 1;
+		}
+
+	}
+	catch (const std::runtime_error& e) {
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
 }
